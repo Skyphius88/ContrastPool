@@ -232,9 +232,10 @@ class ContrastPoolNet(nn.Module):
 
         self.cal_contrast_adj(device=h.device)
         adj, h = self.first_diffpool_layer(g, g_embedding, self.diff_h, self.contrast_adj_trans)
-        node_per_pool_graph = int(adj.size()[0] / self.batch_size)
-
+        # Update pooled node count per graph to match the pooled dimension
+        node_per_pool_graph = self.first_diffpool_layer.assign_dim
         h, adj = self.batch2tensor(adj, h, node_per_pool_graph)
+
         h = self.gcn_forward_tensorized(h, adj, self.gc_after_pool[0], self.concat)
 
         readout = torch.sum(h, dim=1)
@@ -263,9 +264,11 @@ class ContrastPoolNet(nn.Module):
         return ypred
 
     def batch2tensor(self, batch_adj, batch_feat, node_per_pool_graph):
-        """
-        transform a batched graph to batched adjacency tensor and node feature tensor
-        """
+        if isinstance(node_per_pool_graph, (list, tuple)):
+            node_per_pool_graph = int(node_per_pool_graph[0])
+        elif isinstance(node_per_pool_graph, torch.Tensor):
+            node_per_pool_graph = int(node_per_pool_graph[0].item())
+            
         batch_size = int(batch_adj.size()[0] / node_per_pool_graph)
         adj_list = []
         feat_list = []

@@ -119,10 +119,14 @@ class ContrastPoolLayer(nn.Module):
 
         assign_tensor = masked_softmax(assign_tensor, mask, memory_efficient=False)
         h = torch.matmul(torch.t(assign_tensor), feat)                     # equation (3) of DIFFPOOL paper
-        adj = g.adjacency_matrix(ctx=device)
+        adj = g.adjacency_matrix().to(device)
 
-        adj_new = torch.sparse.mm(adj, assign_tensor)
-        adj_new = torch.mm(torch.t(assign_tensor), adj_new)                # equation (4) of DIFFPOOL paper
+        u, v = g.edges()
+        indices = torch.stack([u, v])
+        values = torch.ones(g.num_edges(), dtype=torch.float32, device=device)
+        adj = torch.sparse_coo_tensor(indices, values, (g.num_nodes(), g.num_nodes()), device=device)
+        adj_new = torch.sparse.mm(adj, assign_tensor)               # equation (4) of DIFFPOOL paper
+        adj_new = torch.mm(torch.t(assign_tensor), adj_new)         # equation (4) of DIFFPOOL paper
 
         if self.link_pred:
             current_lp_loss = torch.norm(adj.to_dense() -

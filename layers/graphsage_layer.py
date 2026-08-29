@@ -29,7 +29,7 @@ class GraphSageLayer(nn.Module):
 
         self.dropout = nn.Dropout(p=dropout)
 
-        self.message_func = fn.copy_src(src='h', out='m') if not e_feat else fn.u_mul_e('h', 'e', 'm')
+        self.message_func = fn.copy_u(u='h', out='m') if not e_feat else fn.u_mul_e('h', 'e', 'm')
 
         if dgl_builtin == False:
             self.nodeapply = NodeApply(in_feats, out_feats, activation, dropout,
@@ -58,7 +58,7 @@ class GraphSageLayer(nn.Module):
             # e = self.dropout(e)
             g.ndata['h'] = h
             # g.edata['e'] = e
-            g.update_all(fn.copy_src(src='h', out='m'),
+            g.update_all(fn.copy_u(u='h', out='m'),
                          self.aggregator,
                          self.nodeapply)
 
@@ -67,7 +67,7 @@ class GraphSageLayer(nn.Module):
             h = self.sageconv(g, h)
 
         if self.batch_norm:
-            h = self.batchnorm_h(g, h)
+            h = self.batchnorm_h(h)
 
         if self.residual:
             h = h_in + h       # residual connection
